@@ -1,18 +1,18 @@
 파일을 주고받는 서버
 
-  #include <stdio.h>
-  #include <stdlib.h>
-  #include <string>
-  #include <winsock2.h>
-  #include <ws2tcpip.h>
-  #include <fstream>
-  #include "..\..\Common.h"   // err_quit(), err_display() 정의된 헤더
-  
-  #pragma comment(lib, "ws2_32.lib")  // 윈속 라이브러리 링크
-  
-  #define SERVERPORT 9000
-  #define BUFSIZE    512
-  using namespace std;
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <string>
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+    #include <fstream>
+    #include "..\..\Common.h"   // err_quit(), err_display() 정의된 헤더
+    
+    #pragma comment(lib, "ws2_32.lib")  // 윈속 라이브러리 링크
+    
+    #define SERVERPORT 9000
+    #define BUFSIZE    512
+    using namespace std;
   
   int main(int argc, char* argv[])
   {
