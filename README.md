@@ -121,96 +121,96 @@
 
 파일을 주고받는 클라이언트
 
-  #include <stdio.h>
-  #include <stdlib.h>
-  #include <string>
-  #include <winsock2.h>
-  #include <ws2tcpip.h>
-  #include <fstream>
-  #include <iostream>
-  
-  #pragma comment(lib, "ws2_32.lib")
-  
-  #define SERVERIP   "127.0.0.1" // 서버 IP
-  #define SERVERPORT 9000
-  #define BUFSIZE    512
-  
-  using namespace std;
-  
-  int main() {
-      WSADATA wsa;
-      if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) return 1;
-  
-      SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
-      if (sock == INVALID_SOCKET) {
-          printf("socket() 실패\n");
-          WSACleanup();
-          return 1;
-      }
-  
-      struct sockaddr_in serveraddr;
-      memset(&serveraddr, 0, sizeof(serveraddr));
-      serveraddr.sin_family = AF_INET;
-      inet_pton(AF_INET, SERVERIP, &serveraddr.sin_addr);
-      serveraddr.sin_port = htons(SERVERPORT);
-  
-      if (connect(sock, (struct sockaddr*)&serveraddr, sizeof(serveraddr)) == SOCKET_ERROR) {
-          printf("connect() 실패\n");
+      #include <stdio.h>
+      #include <stdlib.h>
+      #include <string>
+      #include <winsock2.h>
+      #include <ws2tcpip.h>
+      #include <fstream>
+      #include <iostream>
+      
+      #pragma comment(lib, "ws2_32.lib")
+      
+      #define SERVERIP   "127.0.0.1" // 서버 IP
+      #define SERVERPORT 9000
+      #define BUFSIZE    512
+      
+      using namespace std;
+      
+      int main() {
+          WSADATA wsa;
+          if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) return 1;
+      
+          SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
+          if (sock == INVALID_SOCKET) {
+              printf("socket() 실패\n");
+              WSACleanup();
+              return 1;
+          }
+      
+          struct sockaddr_in serveraddr;
+          memset(&serveraddr, 0, sizeof(serveraddr));
+          serveraddr.sin_family = AF_INET;
+          inet_pton(AF_INET, SERVERIP, &serveraddr.sin_addr);
+          serveraddr.sin_port = htons(SERVERPORT);
+      
+          if (connect(sock, (struct sockaddr*)&serveraddr, sizeof(serveraddr)) == SOCKET_ERROR) {
+              printf("connect() 실패\n");
+              closesocket(sock);
+              WSACleanup();
+              return 1;
+          }
+      
+          char buf[BUFSIZE + 1];
+          string cmd;
+      
+          while (true) {
+              printf("\n보낼 메시지: ");
+              getline(cin, cmd);
+      
+              if (cmd == "quit") break;
+      
+              send(sock, cmd.c_str(), (int)cmd.size() + 1, 0);
+      
+              if (cmd == "list") {
+                  int n = recv(sock, buf, BUFSIZE, 0);
+                  if (n > 0) {
+                      buf[n] = '\0';
+                      printf("서버 파일 리스트:\n%s\n", buf);
+                  }
+                  continue;
+              }
+      
+              if (cmd.substr(0, 4) == "get ") {
+                  string filename = cmd.substr(4);
+                  ofstream outFile(filename, ios::binary);
+                  int n;
+      
+                  while ((n = recv(sock, buf, BUFSIZE, 0)) > 0) {
+                      buf[n] = '\0';
+                      string msg(buf, n);
+      
+                      if (msg == "none") {
+                          printf("[클라이언트] 서버에 파일이 없습니다.\n");
+                          outFile.close();
+                          remove(filename.c_str());
+                          break;
+                      }
+                      if (msg.find("[SERVER] File transfer complete") != string::npos) {
+                          printf("[클라이언트] 파일 전송 완료\n");
+                          break;
+                      }
+      
+                      outFile.write(buf, n);
+                  }
+                  outFile.close();
+                  continue;
+              }
+      
+              printf("[클라이언트] 알 수 없는 명령입니다.\n");
+          }
+      
           closesocket(sock);
           WSACleanup();
-          return 1;
+          return 0;
       }
-  
-      char buf[BUFSIZE + 1];
-      string cmd;
-  
-      while (true) {
-          printf("\n보낼 메시지: ");
-          getline(cin, cmd);
-  
-          if (cmd == "quit") break;
-  
-          send(sock, cmd.c_str(), (int)cmd.size() + 1, 0);
-  
-          if (cmd == "list") {
-              int n = recv(sock, buf, BUFSIZE, 0);
-              if (n > 0) {
-                  buf[n] = '\0';
-                  printf("서버 파일 리스트:\n%s\n", buf);
-              }
-              continue;
-          }
-  
-          if (cmd.substr(0, 4) == "get ") {
-              string filename = cmd.substr(4);
-              ofstream outFile(filename, ios::binary);
-              int n;
-  
-              while ((n = recv(sock, buf, BUFSIZE, 0)) > 0) {
-                  buf[n] = '\0';
-                  string msg(buf, n);
-  
-                  if (msg == "none") {
-                      printf("[클라이언트] 서버에 파일이 없습니다.\n");
-                      outFile.close();
-                      remove(filename.c_str());
-                      break;
-                  }
-                  if (msg.find("[SERVER] File transfer complete") != string::npos) {
-                      printf("[클라이언트] 파일 전송 완료\n");
-                      break;
-                  }
-  
-                  outFile.write(buf, n);
-              }
-              outFile.close();
-              continue;
-          }
-  
-          printf("[클라이언트] 알 수 없는 명령입니다.\n");
-      }
-  
-      closesocket(sock);
-      WSACleanup();
-      return 0;
-  }
