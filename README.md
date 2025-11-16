@@ -1,4 +1,5 @@
 파일을 주고받는 서버
+
   #include <stdio.h>
   #include <stdlib.h>
   #include <string>
@@ -119,6 +120,7 @@
   }
 
 파일을 주고받는 클라이언트
+
   #include <stdio.h>
   #include <stdlib.h>
   #include <string>
