@@ -15,109 +15,109 @@
     using namespace std;
   
       int main(int argc, char* argv[])
-  {
-      int retval;
-  
-      WSADATA wsa;
-      if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
-          return 1;
-  
-      SOCKET listen_sock = socket(AF_INET, SOCK_STREAM, 0);
-      if (listen_sock == INVALID_SOCKET) err_quit("socket()");
-  
-      struct sockaddr_in serveraddr;
-      memset(&serveraddr, 0, sizeof(serveraddr));
-      serveraddr.sin_family = AF_INET;
-      serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
-      serveraddr.sin_port = htons(SERVERPORT);
-      retval = bind(listen_sock, (struct sockaddr*)&serveraddr, sizeof(serveraddr));
-      if (retval == SOCKET_ERROR) err_quit("bind()");
-  
-      retval = listen(listen_sock, SOMAXCONN);
-      if (retval == SOCKET_ERROR) err_quit("listen()");
-  
-      SOCKET client_sock;
-      struct sockaddr_in clientaddr;
-      int addrlen;
-      char buf[BUFSIZE + 1];
-  
-      while (1) {
-          printf("연결을 기다리는 중\n");
-  
-          addrlen = sizeof(clientaddr);
-          client_sock = accept(listen_sock, (struct sockaddr*)&clientaddr, &addrlen);
-          if (client_sock == INVALID_SOCKET) {
-              err_display("accept()");
-              break;
-          }
-  
-          char addr[INET_ADDRSTRLEN];
-          inet_ntop(AF_INET, &clientaddr.sin_addr, addr, sizeof(addr));
-          printf("\n[TCP 서버] 클라이언트 접속: IP=%s, 포트=%d\n",
-              addr, ntohs(clientaddr.sin_port));
-  
+      {
+          int retval;
+      
+          WSADATA wsa;
+          if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
+              return 1;
+      
+          SOCKET listen_sock = socket(AF_INET, SOCK_STREAM, 0);
+          if (listen_sock == INVALID_SOCKET) err_quit("socket()");
+      
+          struct sockaddr_in serveraddr;
+          memset(&serveraddr, 0, sizeof(serveraddr));
+          serveraddr.sin_family = AF_INET;
+          serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
+          serveraddr.sin_port = htons(SERVERPORT);
+          retval = bind(listen_sock, (struct sockaddr*)&serveraddr, sizeof(serveraddr));
+          if (retval == SOCKET_ERROR) err_quit("bind()");
+      
+          retval = listen(listen_sock, SOMAXCONN);
+          if (retval == SOCKET_ERROR) err_quit("listen()");
+      
+          SOCKET client_sock;
+          struct sockaddr_in clientaddr;
+          int addrlen;
+          char buf[BUFSIZE + 1];
+      
           while (1) {
-              retval = recv(client_sock, buf, BUFSIZE, 0);
-              if (retval == SOCKET_ERROR) { err_display("recv()"); break; }
-              else if (retval == 0) break;
-  
-              buf[retval] = '\0';
-              printf("[TCP/%s:%d] 클라이언트 메시지: %s\n",
-                  addr, ntohs(clientaddr.sin_port), buf);
-  
-              if (strcmp(buf, "list") == 0) {
-                  const char* listMsg =
-                      "a.txt\n"
-                      "b.txt\n"
-                      "c.png\n"
-                      "d.png\n";
-                  send(client_sock, listMsg, (int)strlen(listMsg) + 1, 0); // null 포함
-                  continue;
+              printf("연결을 기다리는 중\n");
+      
+              addrlen = sizeof(clientaddr);
+              client_sock = accept(listen_sock, (struct sockaddr*)&clientaddr, &addrlen);
+              if (client_sock == INVALID_SOCKET) {
+                  err_display("accept()");
+                  break;
               }
-  
-              if (strncmp(buf, "get ", 4) == 0) {
-                  string filename(buf + 4);
-  
-                  ifstream file(filename, ios::binary);
-                  if (!file) {
-                      const char* noneMsg = "none\0";
-                      send(client_sock, noneMsg, (int)strlen(noneMsg) + 1, 0);
-                      closesocket(client_sock); // 클라이언트 종료
-                      printf("[TCP 서버] 파일 없음, 클라이언트 종료: IP=%s, 포트=%d\n",
+      
+              char addr[INET_ADDRSTRLEN];
+              inet_ntop(AF_INET, &clientaddr.sin_addr, addr, sizeof(addr));
+              printf("\n[TCP 서버] 클라이언트 접속: IP=%s, 포트=%d\n",
+                  addr, ntohs(clientaddr.sin_port));
+      
+              while (1) {
+                  retval = recv(client_sock, buf, BUFSIZE, 0);
+                  if (retval == SOCKET_ERROR) { err_display("recv()"); break; }
+                  else if (retval == 0) break;
+      
+                  buf[retval] = '\0';
+                  printf("[TCP/%s:%d] 클라이언트 메시지: %s\n",
+                      addr, ntohs(clientaddr.sin_port), buf);
+      
+                  if (strcmp(buf, "list") == 0) {
+                      const char* listMsg =
+                          "a.txt\n"
+                          "b.txt\n"
+                          "c.png\n"
+                          "d.png\n";
+                      send(client_sock, listMsg, (int)strlen(listMsg) + 1, 0); // null 포함
+                      continue;
+                  }
+      
+                  if (strncmp(buf, "get ", 4) == 0) {
+                      string filename(buf + 4);
+      
+                      ifstream file(filename, ios::binary);
+                      if (!file) {
+                          const char* noneMsg = "none\0";
+                          send(client_sock, noneMsg, (int)strlen(noneMsg) + 1, 0);
+                          closesocket(client_sock); // 클라이언트 종료
+                          printf("[TCP 서버] 파일 없음, 클라이언트 종료: IP=%s, 포트=%d\n",
+                              addr, ntohs(clientaddr.sin_port));
+                          break;
+                      }
+      
+                      char filebuf[BUFSIZE];
+                      while (!file.eof()) {
+                          file.read(filebuf, sizeof(filebuf));
+                          int bytesRead = (int)file.gcount();
+                          send(client_sock, filebuf, bytesRead, 0);
+                      }
+                      file.close();
+      
+                      const char* doneMsg = "\n[SERVER] File transfer complete\0";
+                      send(client_sock, doneMsg, (int)strlen(doneMsg) + 1, 0);
+      
+                      closesocket(client_sock);
+                      printf("[TCP 서버] 파일 전송 완료, 클라이언트 종료: IP=%s, 포트=%d\n",
                           addr, ntohs(clientaddr.sin_port));
                       break;
                   }
-  
-                  char filebuf[BUFSIZE];
-                  while (!file.eof()) {
-                      file.read(filebuf, sizeof(filebuf));
-                      int bytesRead = (int)file.gcount();
-                      send(client_sock, filebuf, bytesRead, 0);
-                  }
-                  file.close();
-  
-                  const char* doneMsg = "\n[SERVER] File transfer complete\0";
-                  send(client_sock, doneMsg, (int)strlen(doneMsg) + 1, 0);
-  
-                  closesocket(client_sock);
-                  printf("[TCP 서버] 파일 전송 완료, 클라이언트 종료: IP=%s, 포트=%d\n",
-                      addr, ntohs(clientaddr.sin_port));
-                  break;
+      
+                  retval = send(client_sock, buf, retval, 0);
+                  if (retval == SOCKET_ERROR) { err_display("send()"); break; }
               }
-  
-              retval = send(client_sock, buf, retval, 0);
-              if (retval == SOCKET_ERROR) { err_display("send()"); break; }
+      
+              if (client_sock != INVALID_SOCKET) {
+                  closesocket(client_sock);
+              }
           }
-  
-          if (client_sock != INVALID_SOCKET) {
-              closesocket(client_sock);
-          }
+      
+          closesocket(listen_sock);
+          WSACleanup();
+          return 0;
       }
-  
-      closesocket(listen_sock);
-      WSACleanup();
-      return 0;
-  }
 
 파일을 주고받는 클라이언트
 
